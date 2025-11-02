@@ -1,0 +1,16 @@
+services:
+  #Payara server
+  payara:
+    container_name: payara-ws
+    image: payara/server-full:6.2025.8-jdk17
+    environment:
+      SECURE_ADMIN: "true"
+      ADMIN_USER: "admin"
+      ADMIN_PASSWORD: "admin"
+    ports:
+      - "8080:8080"   #apps
+      - "4848:4848"   #admin console
+    volumes:
+      #auto deploy (maps local target artefact to container)
+      - ./target/LuxuryCarRentalService-1.0-SNAPSHOT:/opt/payara/appserver/glassfish/domains/domain1/autodeploy/LuxuryCarRentalService-1.0-SNAPSHOT.war
+
