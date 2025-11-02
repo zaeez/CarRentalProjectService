@@ -8,6 +8,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
 
 @Path("/bookings")
@@ -28,6 +29,18 @@ public class BookingResource {
     @Path("/{id}")
     public Booking getBooking(@PathParam("id") UUID id) {
         return bookingService.getBooking(id);
+    }
+
+    @GET
+    @Path("/customer/{customerId}")
+    public List<Booking> getBookingsByCustomer(@PathParam("customerId") UUID customerId) {
+        return bookingService.getBookingsByCustomerId(customerId);
+    }
+
+    @GET
+    @Path("/car/{carId}")
+    public List<Booking> getBookingsByCar(@PathParam("carId") UUID carId) {
+        return bookingService.getBookingsByCarId(carId);
     }
 
     @POST

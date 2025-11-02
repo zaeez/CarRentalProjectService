@@ -7,7 +7,6 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -51,6 +50,47 @@ public class AdminResource {
     @Path("/{id}")
     public boolean removeAdmin(@PathParam("id") UUID id) {
         return adminService.removeAdmin(id);
+    }
+
+    // Login
+    @POST
+    @Path("/login")
+    public Response login(Map<String, String> loginRequest) {
+        String username = loginRequest.get("username");
+        String password = loginRequest.get("password");
+
+        if (username == null || password == null) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(Map.of("message", "Username and password are required"))
+                    .build();
+        }
+
+        try {
+            Admin admin = adminService.authenticate(username, password);
+            // Some information can be returned to avoid leaking the password.
+            return Response.ok(Map.of(
+                    "id", admin.getId(),
+                    "username", admin.getUsername(),
+                    "name", admin.getName(),
+                    "email", admin.getEmail()
+            )).build();
+        } catch (WebApplicationException e) {
+            return Response.status(e.getResponse().getStatus())
+                    .entity(Map.of("message", e.getMessage()))
+                    .build();
+        }
+    }
+
+    // Change password
+    public static class ChangePasswordRequest {
+        public String oldPassword;
+        public String newPassword;
+    }
+    @PUT
+    @Path("/{id}/change-password")
+    public Response changePassword(@PathParam("id") UUID id, ChangePasswordRequest request) {
+        adminService.changePassword(id, request.oldPassword, request.newPassword);
+        return Response.ok(Map.of("message", "Password changed successfully")).build();
     }
 
 }

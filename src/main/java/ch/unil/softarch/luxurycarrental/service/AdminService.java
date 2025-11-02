@@ -86,4 +86,34 @@ public class AdminService {
     public boolean removeAdmin(UUID id) {
         return state.getAdmins().remove(id) != null;
     }
+
+    // Login verification
+    public Admin authenticate(String username, String password) {
+        return state.getAdmins().values().stream()
+                .filter(admin -> admin.getUsername().equals(username)
+                        && admin.getPassword().equals(password))
+                .findFirst()
+                .orElseThrow(() -> new WebApplicationException("Invalid username or password", 401));
+    }
+
+    // Get the administrator according to the ID
+    public Admin getAdminById(UUID id) {
+        Admin admin = state.getAdmins().get(id);
+        if (admin == null) throw new WebApplicationException("Admin not found", 404);
+        return admin;
+    }
+
+    /**
+     * Change admin password by ID
+     */
+    public boolean changePassword(UUID adminId, String oldPassword, String newPassword) {
+        Admin admin = state.getAdmins().get(adminId);
+        if (admin == null) return false; // admin not found
+        if (!admin.getPassword().equals(oldPassword)) return false; // wrong old password
+
+        admin.setPassword(newPassword);
+        return true;
+    }
+
+
 }

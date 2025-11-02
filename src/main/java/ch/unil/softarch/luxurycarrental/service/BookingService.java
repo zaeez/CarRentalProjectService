@@ -16,7 +16,9 @@ import com.itextpdf.layout.Document;
 import com.itextpdf.layout.element.Paragraph;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class BookingService {
@@ -33,6 +35,20 @@ public class BookingService {
         return state.getBookings().get(id);
     }
 
+    // Get bookings by customer ID
+    public List<Booking> getBookingsByCustomerId(UUID customerId) {
+        return state.getBookings().values().stream()
+                .filter(b -> b.getCustomer() != null && b.getCustomer().getId().equals(customerId))
+                .collect(Collectors.toList());
+    }
+
+    // Get bookings by car ID
+    public List<Booking> getBookingsByCarId(UUID carId) {
+        return state.getBookings().values().stream()
+                .filter(b -> b.getCar() != null && b.getCar().getId().equals(carId))
+                .collect(Collectors.toList());
+    }
+
     public Booking createBooking(Booking booking) {
         Car car = state.getCars().get(booking.getCar().getId());
         Customer customer = state.getCustomers().get(booking.getCustomer().getId());
@@ -46,17 +62,14 @@ public class BookingService {
         if (booking.getEndDate().isBefore(booking.getStartDate()))
             throw new WebApplicationException("End date must be after start date", 400);
 
-        // 更新余额和车辆状态
-        customer.setBalance(customer.getBalance() - booking.getDepositAmount());
-        car.setStatus(CarStatus.UNAVAILABLE);
 
-        booking.setBookingStatus(BookingStatus.CONFIRMED);
+        booking.setBookingStatus(BookingStatus.PENDING);
         booking.setPaymentStatus(PaymentStatus.PENDING);
         if (booking.getBookingId() == null) booking.setBookingId(UUID.randomUUID());
 
         state.getBookings().put(booking.getBookingId(), booking);
 
-        // --- 准备 HTML 邮件 ---
+        // --- Prepare HTML mail ---
         String htmlBody = "<h2>Booking Confirmation</h2>" +
                 "<p>Hi <b>" + customer.getFirstName() + " " + customer.getLastName() + "</b>,</p>" +
                 "<p>Your booking has been <b>confirmed</b>! Here are the details:</p>" +
@@ -93,7 +106,7 @@ public class BookingService {
                 "</table>" +
                 "<p>Thank you for choosing <b>Luxury Car Rental</b>!</p>";
 
-        // --- 生成 PDF 附件 ---
+        // --- Generate PDF attachments ---
         byte[] pdfBytes;
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             PdfWriter writer = new PdfWriter(baos);
@@ -132,7 +145,7 @@ public class BookingService {
             pdfBytes = new byte[0];
         }
 
-        // --- 异步发送邮件 ---
+        // --- Asynchronous email sending ---
         final byte[] finalPdfBytes = pdfBytes;
         new Thread(() -> EmailSender.sendEmailWithAttachment(
                 customer.getEmail(),

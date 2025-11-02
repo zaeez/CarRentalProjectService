@@ -1,9 +1,8 @@
 package ch.unil.softarch.luxurycarrental.rest;
 
-import ch.unil.softarch.luxurycarrental.domain.exceptions.BookingConflictException;
-import ch.unil.softarch.luxurycarrental.domain.exceptions.CarUnavailableException;
-import ch.unil.softarch.luxurycarrental.domain.exceptions.PaymentFailedException;
+import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Context;
+import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.ExceptionMapper;
 import jakarta.ws.rs.ext.Provider;
@@ -19,53 +18,33 @@ import java.util.logging.Logger;
 @Provider
 public class GlobalExceptionMapper implements ExceptionMapper<Exception> {
 
-    private static final Logger log = Logger.getLogger(GlobalExceptionMapper.class.getName());
-
     @Context
-    private UriInfo uriInfo; // Provides request URI information
+    private UriInfo uriInfo;
 
     @Override
     public Response toResponse(Exception exception) {
-        log.severe("Exception caught: " + exception.getMessage());
-
-        // Default HTTP status code
-        Response.Status status = Response.Status.INTERNAL_SERVER_ERROR;
+        int statusCode = 500;
         String message = exception.getMessage();
 
-        // Map specific domain exceptions to proper HTTP status codes
-        if (exception instanceof CarUnavailableException) {
-            status = Response.Status.CONFLICT; // 409 Conflict
-            message = "The selected car is currently unavailable.";
-        } else if (exception instanceof BookingConflictException) {
-            status = Response.Status.CONFLICT; // 409 Conflict
-            message = "A booking conflict occurred. Please select another time.";
-        } else if (exception instanceof PaymentFailedException) {
-            status = Response.Status.PAYMENT_REQUIRED; // 402 Payment Required
-            message = "Payment failed. Please check your payment method.";
-        }
+        ErrorResponse errorResponse = new ErrorResponse();
+        errorResponse.setErrorType(exception.getClass().getSimpleName());
+        errorResponse.setMessage(message);
+        errorResponse.setTimestamp(LocalDateTime.now());
+        errorResponse.setPath(uriInfo != null ? uriInfo.getPath() : "");
 
-        // Build a unified error response
-        ErrorResponse errorResponse = new ErrorResponse(
-                exception.getClass().getSimpleName(),
-                message,
-                LocalDateTime.now(),
-                uriInfo != null ? uriInfo.getPath() : ""
-        );
-
-        return Response.status(status)
+        return Response.status(statusCode)
                 .entity(errorResponse)
+                .type(MediaType.APPLICATION_JSON)
                 .build();
     }
 
-    /**
-     * Unified error response model.
-     * Sent back to clients as a JSON object.
-     */
     public static class ErrorResponse {
-        private String errorType;      // Type of the exception
-        private String message;        // Human-readable error message
-        private LocalDateTime timestamp; // Time when the error occurred
-        private String path;           // Request path that triggered the exception
+        private String errorType;
+        private String message;
+        private LocalDateTime timestamp;
+        private String path;
+
+        public ErrorResponse() {}
 
         public ErrorResponse(String errorType, String message, LocalDateTime timestamp, String path) {
             this.errorType = errorType;
@@ -75,8 +54,15 @@ public class GlobalExceptionMapper implements ExceptionMapper<Exception> {
         }
 
         public String getErrorType() { return errorType; }
+        public void setErrorType(String errorType) { this.errorType = errorType; }
+
         public String getMessage() { return message; }
+        public void setMessage(String message) { this.message = message; }
+
         public LocalDateTime getTimestamp() { return timestamp; }
+        public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }
+
         public String getPath() { return path; }
+        public void setPath(String path) { this.path = path; }
     }
 }

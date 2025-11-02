@@ -107,4 +107,33 @@ public class CustomerService {
         System.out.println("Deleted Customer " + id);
         return true;
     }
+
+    // Login verification
+    public Customer authenticate(String email, String password) {
+        return state.getCustomers().values().stream()
+                .filter(c -> c.getEmail().equals(email)
+                        && c.getPassword().equals(password))
+                .findFirst()
+                .orElseThrow(() -> new WebApplicationException("Invalid email or password", 401));
+    }
+
+    // Get customer information according to ID
+    public Customer getCustomerById(UUID id) {
+        Customer customer = state.getCustomers().get(id);
+        if (customer == null) throw new WebApplicationException("Customer not found", 404);
+        return customer;
+    }
+
+
+    /**
+     * Change customer password by ID
+     */
+    public boolean changePassword(UUID customerId, String oldPassword, String newPassword) {
+        Customer customer = state.getCustomers().get(customerId);
+        if (customer == null) return false; // customer not found
+        if (!customer.getPassword().equals(oldPassword)) return false; // wrong old password
+
+        customer.setPassword(newPassword);
+        return true;
+    }
 }
