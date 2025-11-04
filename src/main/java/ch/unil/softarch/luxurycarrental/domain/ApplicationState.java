@@ -12,12 +12,32 @@ import java.util.*;
 @ApplicationScoped
 public class ApplicationState {
 
+    // Inner class to store code and timestamp
+    public static class VerificationCode {
+        private final String code;
+        private final LocalDateTime createdAt;
+        public VerificationCode(String code, LocalDateTime createdAt) {
+            this.code = code;
+            this.createdAt = createdAt;
+        }
+
+        public String getCode() {
+            return code;
+        }
+
+        public LocalDateTime getCreatedAt() {
+            return createdAt;
+        }
+    }
+
     // ---------- In-memory storage ----------
     private Map<UUID, Customer> customers;
     private Map<UUID, Admin> admins;
     private Map<UUID, Car> cars;
     private Map<UUID, Booking> bookings;
     private Map<UUID, CarType> carTypes;
+    // Map: VerificationCode
+    private Map<UUID, VerificationCode> passwordResetCodes;
 
     // ---------- Initialization ----------
     @PostConstruct
@@ -27,6 +47,7 @@ public class ApplicationState {
         cars = new TreeMap<>();
         bookings = new TreeMap<>();
         carTypes = new TreeMap<>();
+        passwordResetCodes = new HashMap<>();
         populateApplicationState();
     }
 
@@ -36,6 +57,7 @@ public class ApplicationState {
     public Map<UUID, Car> getCars() { return cars; }
     public Map<UUID, Booking> getBookings() { return bookings; }
     public Map<UUID, CarType> getCarTypes() { return carTypes; }
+    public Map<UUID, VerificationCode> getPasswordResetCodes() {return passwordResetCodes;}
 
     // ---------- Data population ----------
     private void populateApplicationState() {

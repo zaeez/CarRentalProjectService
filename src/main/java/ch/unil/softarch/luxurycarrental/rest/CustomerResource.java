@@ -88,10 +88,26 @@ public class CustomerResource {
         public String newPassword;
     }
 
+    // --- Request password reset code ---
+    @POST
+    @Path("/{id}/password-reset-code")
+    public Response sendPasswordResetCode(@PathParam("id") UUID id) {
+        customerService.sendPasswordResetCode(id);
+        return Response.ok(Map.of("message", "Verification code sent to your email")).build();
+    }
+
+    // --- Reset password using verification code ---
     @PUT
-    @Path("/{id}/change-password")
-    public Response changePassword(@PathParam("id") UUID id, ChangePasswordRequest request) {
-        customerService.changePassword(id, request.oldPassword, request.newPassword);
-        return Response.ok(Map.of("message", "Password changed successfully")).build();
+    @Path("/{id}/reset-password")
+    public Response resetPasswordWithCode(@PathParam("id") UUID id, Map<String, String> body) {
+        String code = body.get("code");
+        String newPassword = body.get("newPassword");
+
+        if (code == null || newPassword == null) {
+            throw new WebApplicationException("Missing required fields", 400);
+        }
+
+        customerService.resetPasswordWithCode(id, code, newPassword);
+        return Response.ok(Map.of("message", "Password reset successfully")).build();
     }
 }

@@ -7,8 +7,10 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.WebApplicationException;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Random;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -126,14 +128,69 @@ public class CustomerService {
 
 
     /**
-     * Change customer password by ID
+     * Send password reset code to customer's email.
      */
-    public boolean changePassword(UUID customerId, String oldPassword, String newPassword) {
+    public void sendPasswordResetCode(UUID customerId) {
         Customer customer = state.getCustomers().get(customerId);
-        if (customer == null) return false; // customer not found
-        if (!customer.getPassword().equals(oldPassword)) return false; // wrong old password
+        if (customer == null) {
+            throw new WebApplicationException("Customer not found", 404);
+        }
 
+        // Generate random 6-digit code
+        String code = String.format("%06d", new Random().nextInt(999999));
+
+        // Save to application state
+        state.getPasswordResetCodes().put(customerId,
+                new ApplicationState.VerificationCode(code, LocalDateTime.now()));
+
+        // Send email asynchronously
+        String subject = "Password Reset Code";
+        String body = "Hello " + customer.getFirstName() + ",\n\n" +
+                "Your password reset code is: " + code + "\n" +
+                "This code will expire in 5 minutes.\n\n" +
+                "Luxury Car Rental Team";
+        EmailSender.sendEmailAsync(customer.getEmail(), subject, body);
+    }
+
+    /**
+     * Reset password using verification code.
+     * The code is valid for 5 minutes and can only be used once.
+     */
+    public void resetPasswordWithCode(UUID customerId, String code, String newPassword) {
+        Customer customer = state.getCustomers().get(customerId);
+        if (customer == null) {
+            throw new WebApplicationException("Customer not found", 404);
+        }
+
+        ApplicationState.VerificationCode stored = state.getPasswordResetCodes().get(customerId);
+        if (stored == null) {
+            throw new WebApplicationException("No verification code found", 400);
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        // Check if expired (>= 5 minutes)
+        if (Duration.between(stored.getCreatedAt(), now).toMinutes() >= 5) {
+            state.getPasswordResetCodes().remove(customerId); // remove expired code
+            throw new WebApplicationException("Verification code expired", 400);
+        }
+
+        // Check code correctness
+        if (!stored.getCode().equals(code)) {
+            throw new WebApplicationException("Invalid verification code", 400);
+        }
+
+        // Update password
         customer.setPassword(newPassword);
-        return true;
+
+        // Invalidate the code immediately after successful use
+        state.getPasswordResetCodes().remove(customerId);
+
+        // Send email asynchronously
+        String subject = "Your password has been changed";
+        String body = "Hello " + customer.getFirstName() + ",\n\n" +
+                "Your password has been successfully changed.\n" +
+                "If you did not perform this change, please contact our support immediately.\n\n" +
+                "Luxury Car Rental Team";
+        EmailSender.sendEmailAsync(customer.getEmail(), subject, body);
     }
 }

@@ -2,7 +2,6 @@ package ch.unil.softarch.luxurycarrental.service;
 
 import ch.unil.softarch.luxurycarrental.domain.ApplicationState;
 import ch.unil.softarch.luxurycarrental.domain.entities.Admin;
-import ch.unil.softarch.luxurycarrental.domain.entities.Customer;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.WebApplicationException;
